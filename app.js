@@ -3,7 +3,7 @@
  * Monitors multiple website iframes and checks online/offline health status.
  */
 
-// Initial default websites (including the user's 4 websites + 5 customizable slots for 9 in total)
+// Initial default websites (the 4 official websites)
 const DEFAULT_SITES = [
   {
     id: 'site-1',
@@ -13,9 +13,9 @@ const DEFAULT_SITES = [
   },
   {
     id: 'site-2',
-    name: 'داواتورا التجريبي (Dawatoora)',
+    name: 'داواتورا (Dawatoora)',
     url: 'https://testwebsite.dawatoora.com/',
-    category: 'البيئة التجريبية'
+    category: 'داواتورا'
   },
   {
     id: 'site-3',
@@ -28,36 +28,6 @@ const DEFAULT_SITES = [
     name: 'إطارات جنيد ماسة (Juned Tyres)',
     url: 'https://tyres.junedmasa.com/en',
     category: 'متاجر وإطارات'
-  },
-  {
-    id: 'site-5',
-    name: 'الموقع الخامس (مساحة مخصصة)',
-    url: 'https://example.com',
-    category: 'مواقع إضافية'
-  },
-  {
-    id: 'site-6',
-    name: 'الموقع السادس (مساحة مخصصة)',
-    url: 'https://ar.wikipedia.org/wiki/%D8%A7%D9%84%D8%B5%D9%81%D8%AD%D8%A9_%D8%A7%D9%84%D8%B1%D8%A6%D9%8A%D8%B3%D9%8A%D8%A9',
-    category: 'مواقع إضافية'
-  },
-  {
-    id: 'site-7',
-    name: 'الموقع السابع (مساحة مخصصة)',
-    url: 'https://httpbin.org/status/200',
-    category: 'مواقع إضافية'
-  },
-  {
-    id: 'site-8',
-    name: 'الموقع الثامن (مساحة مخصصة)',
-    url: 'https://www.w3schools.com',
-    category: 'مواقع إضافية'
-  },
-  {
-    id: 'site-9',
-    name: 'الموقع التاسع (مساحة مخصصة)',
-    url: 'https://cdnjs.cloudflare.com',
-    category: 'مواقع إضافية'
   }
 ];
 
@@ -71,7 +41,7 @@ let state = {
   countdown: 60,
   countdownTimerId: null,
   autoRefreshTimerId: null,
-  currentLayout: 'grid-3x3'
+  currentLayout: 'grid-2x2'
 };
 
 // DOM Elements
@@ -92,12 +62,9 @@ const countOfflineFilter = document.getElementById('countOfflineFilter');
 const countdownSeconds = document.getElementById('countdownSeconds');
 
 const addSiteBtn = document.getElementById('addSiteBtn');
-const bulkImportBtn = document.getElementById('bulkImportBtn');
 const recheckAllBtn = document.getElementById('recheckAllBtn');
 const refreshIcon = document.getElementById('refreshIcon');
-const resetDefaultsBtn = document.getElementById('resetDefaultsBtn');
 const autoRefreshSelect = document.getElementById('autoRefreshSelect');
-const gridLayoutSelect = document.getElementById('gridLayoutSelect');
 const siteSearchInput = document.getElementById('siteSearchInput');
 const clearSearchBtn = document.getElementById('clearSearchBtn');
 
@@ -113,12 +80,7 @@ const saveBtnText = document.getElementById('saveBtnText');
 const closeModalBtn = document.getElementById('closeModalBtn');
 const cancelModalBtn = document.getElementById('cancelModalBtn');
 
-const bulkModal = document.getElementById('bulkModal');
-const bulkInputText = document.getElementById('bulkInputText');
-const bulkAppendCheck = document.getElementById('bulkAppendCheck');
-const processBulkBtn = document.getElementById('processBulkBtn');
-const closeBulkModalBtn = document.getElementById('closeBulkModalBtn');
-const cancelBulkBtn = document.getElementById('cancelBulkBtn');
+
 
 // Fullscreen Preview Modal
 const fullscreenModal = document.getElementById('fullscreenModal');
@@ -146,11 +108,32 @@ document.addEventListener('DOMContentLoaded', () => {
 
 function loadSitesFromStorage() {
   try {
-    const saved = localStorage.getItem('masa_monitored_sites_v2');
+    const saved = localStorage.getItem('masa_monitored_sites_v3');
     if (saved) {
       state.sites = JSON.parse(saved);
     } else {
-      state.sites = [...DEFAULT_SITES];
+      // Clean up previous storage and eliminate old demo sites
+      const oldSaved = localStorage.getItem('masa_monitored_sites_v2') || localStorage.getItem('masa_monitored_sites');
+      if (oldSaved) {
+        try {
+          const parsed = JSON.parse(oldSaved);
+          const demoUrls = ['example.com', 'wikipedia.org', 'httpbin.org', 'w3schools.com', 'cdnjs.cloudflare.com'];
+          const filtered = parsed.filter(s => 
+            !demoUrls.some(d => s.url && s.url.includes(d)) && 
+            !s.name.includes('مساحة مخصصة') &&
+            !s.name.includes('الموقع الخامس') &&
+            !s.name.includes('الموقع السادس') &&
+            !s.name.includes('الموقع السابع') &&
+            !s.name.includes('الموقع الثامن') &&
+            !s.name.includes('الموقع التاسع')
+          );
+          state.sites = filtered.length > 0 ? filtered : [...DEFAULT_SITES];
+        } catch (_) {
+          state.sites = [...DEFAULT_SITES];
+        }
+      } else {
+        state.sites = [...DEFAULT_SITES];
+      }
       saveSitesToStorage();
     }
   } catch (e) {
@@ -158,17 +141,13 @@ function loadSitesFromStorage() {
     state.sites = [...DEFAULT_SITES];
   }
 
-  // Load saved layout preference
-  const savedLayout = localStorage.getItem('masa_grid_layout');
-  if (savedLayout) {
-    state.currentLayout = savedLayout;
-    if (gridLayoutSelect) gridLayoutSelect.value = savedLayout;
-    applyGridLayout(savedLayout);
-  }
+  // Fix grid layout to 2x2 for the 4 official sites
+  state.currentLayout = 'grid-2x2';
+  applyGridLayout('grid-2x2');
 }
 
 function saveSitesToStorage() {
-  localStorage.setItem('masa_monitored_sites_v2', JSON.stringify(state.sites));
+  localStorage.setItem('masa_monitored_sites_v3', JSON.stringify(state.sites));
 }
 
 /* ==========================================================================
@@ -176,22 +155,17 @@ function saveSitesToStorage() {
    ========================================================================== */
 function setupEventListeners() {
   // Add Site Modal
-  addSiteBtn.addEventListener('click', () => openAddModal());
-  closeModalBtn.addEventListener('click', closeSiteModal);
-  cancelModalBtn.addEventListener('click', closeSiteModal);
-  siteModal.addEventListener('click', (e) => {
-    if (e.target === siteModal) closeSiteModal();
-  });
-  siteForm.addEventListener('submit', handleSiteFormSubmit);
+  if (addSiteBtn) addSiteBtn.addEventListener('click', () => openAddModal());
+  if (closeModalBtn) closeModalBtn.addEventListener('click', closeSiteModal);
+  if (cancelModalBtn) cancelModalBtn.addEventListener('click', closeSiteModal);
+  if (siteModal) {
+    siteModal.addEventListener('click', (e) => {
+      if (e.target === siteModal) closeSiteModal();
+    });
+  }
+  if (siteForm) siteForm.addEventListener('submit', handleSiteFormSubmit);
 
-  // Bulk Modal
-  bulkImportBtn.addEventListener('click', openBulkModal);
-  closeBulkModalBtn.addEventListener('click', closeBulkModal);
-  cancelBulkBtn.addEventListener('click', closeBulkModal);
-  bulkModal.addEventListener('click', (e) => {
-    if (e.target === bulkModal) closeBulkModal();
-  });
-  processBulkBtn.addEventListener('click', handleBulkImport);
+
 
   // Re-check All
   recheckAllBtn.addEventListener('click', () => {
@@ -206,20 +180,7 @@ function setupEventListeners() {
     showToast(`تم ضبط التحديث التلقائي إلى: ${e.target.options[e.target.selectedIndex].text}`, 'info');
   });
 
-  // Grid Layout select
-  gridLayoutSelect.addEventListener('change', (e) => {
-    const layout = e.target.value;
-    state.currentLayout = layout;
-    localStorage.setItem('masa_grid_layout', layout);
-    applyGridLayout(layout);
-  });
 
-  // Reset to default
-  resetDefaultsBtn.addEventListener('click', () => {
-    if (confirm('هل أنت متأكد من رغبتك في استعادة قائمة المواقع الافتراضية؟')) {
-      loadDefaultSites();
-    }
-  });
 
   // Search Input
   siteSearchInput.addEventListener('input', (e) => {
@@ -263,7 +224,6 @@ function setupEventListeners() {
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
       closeSiteModal();
-      closeBulkModal();
       closeFullscreenModal();
     }
   });
@@ -458,7 +418,7 @@ function updateMetricsSummary() {
   });
 
   // Update Top Stats
-  statTotal.textContent = total;
+  if (statTotal) statTotal.textContent = total;
   statOnline.textContent = onlineCount;
   statOffline.textContent = offlineCount;
 
@@ -610,12 +570,6 @@ function createSiteCardElement(site) {
         <a href="${site.url}" target="_blank" rel="noopener noreferrer" class="card-action-btn" title="فتح في نافذة جديدة">
           <i class="fa-solid fa-arrow-up-right-from-square"></i>
         </a>
-        <button class="card-action-btn" title="تعديل بيانات الموقع" onclick="openEditModal('${site.id}')">
-          <i class="fa-solid fa-pen-to-square"></i>
-        </button>
-        <button class="card-action-btn delete-btn" title="حذف الموقع" onclick="deleteSite('${site.id}')">
-          <i class="fa-solid fa-trash"></i>
-        </button>
       </div>
     </div>
 
@@ -843,84 +797,7 @@ function handleSiteFormSubmit(e) {
   updateMetricsSummary();
 }
 
-/* ==========================================================================
-   Modals: Bulk Import
-   ========================================================================== */
-function openBulkModal() {
-  bulkModal.classList.add('active');
-  bulkInputText.focus();
-}
 
-function closeBulkModal() {
-  bulkModal.classList.remove('active');
-}
-
-function handleBulkImport() {
-  const text = bulkInputText.value.trim();
-  if (!text) {
-    showToast('يرجى إدخال قائمة المواقع أولاً!', 'error');
-    return;
-  }
-
-  const lines = text.split('\n');
-  const newSites = [];
-
-  lines.forEach((line, idx) => {
-    line = line.trim();
-    if (!line) return;
-
-    let name = '';
-    let url = '';
-
-    if (line.includes('|')) {
-      const parts = line.split('|');
-      name = parts[0].trim();
-      url = parts[1].trim();
-    } else if (line.includes(',')) {
-      const parts = line.split(',');
-      name = parts[0].trim();
-      url = parts[1].trim();
-    } else {
-      url = line;
-      try {
-        const parsed = new URL(url.startsWith('http') ? url : 'https://' + url);
-        name = parsed.hostname;
-      } catch (e) {
-        name = `موقع ${idx + 1}`;
-      }
-    }
-
-    if (!url.startsWith('http://') && !url.startsWith('https://')) {
-      url = 'https://' + url;
-    }
-
-    newSites.push({
-      id: 'site-' + Date.now() + '-' + idx,
-      name: name || `موقع جديد ${idx + 1}`,
-      url: url,
-      category: 'استيراد جماعي'
-    });
-  });
-
-  if (newSites.length === 0) {
-    showToast('لم يتم العثور على روابط صحيحة في النص المدخل!', 'error');
-    return;
-  }
-
-  if (bulkAppendCheck.checked) {
-    state.sites = [...state.sites, ...newSites];
-  } else {
-    state.sites = newSites;
-    state.siteStatuses = {};
-  }
-
-  saveSitesToStorage();
-  closeBulkModal();
-  bulkInputText.value = '';
-  renderSites();
-  checkAllSitesStatus();
-  showToast(`تم استيراد ${newSites.length} موقعاً بنجاح!`, 'success');
-}
 
 /* ==========================================================================
    Default Sites Loader

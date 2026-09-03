@@ -9,10 +9,10 @@
   <!-- Favicon -->
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220%22%200%22%20100%22%20100%22><circle cx=%2250%22 cy=%2250%22 r=%2245%22 fill=%22%2310b981%22/><path d=%22M25 50 L42 67 L75 33%22 stroke=%22white%22 stroke-width=%2210%22 fill=%22none%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22/></svg>">
 
-  <!-- Google Fonts: Cairo & Plus Jakarta Sans -->
+  <!-- Google Fonts: Rubik -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Rubik:ital,wght@0,300..900;1,300..900&display=swap" rel="stylesheet">
   
   <!-- FontAwesome for icons -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
@@ -28,34 +28,16 @@
     <!-- Top Header -->
     <header class="app-header" id="mainHeader">
       <div class="header-branding">
-        <div class="logo-wrapper">
-          <div class="logo-icon">
-            <i class="fa-solid fa-satellite-dish"></i>
-          </div>
-          <div class="pulse-ring"></div>
+        <div class="brand-badge-icon">
+          <i class="fa-solid fa-chart-line"></i>
         </div>
-        <div class="branding-text">
-          <div class="title-row">
-            <h1>Masa Pulse Monitor</h1>
-            <span class="live-pill"><span class="live-dot"></span> مباشر</span>
-          </div>
-          <p class="subtitle">مراقبة واستعراض حي لكافة المواقع في شاشة واحدة</p>
-        </div>
+        <h1 class="header-title">مراقبة المواقع الحية</h1>
+        <span class="live-pill"><span class="live-dot"></span> مباشر</span>
       </div>
 
       <!-- Quick Action Controls -->
       <div class="header-actions">
-        <button id="addSiteBtn" class="btn btn-primary" title="إضافة موقع جديد إلى القائمة">
-          <i class="fa-solid fa-plus"></i>
-          <span>إضافة موقع</span>
-        </button>
-
-        <button id="bulkImportBtn" class="btn btn-secondary" title="إضافة أو استيراد عدة روابط دفة واحدة">
-          <i class="fa-solid fa-file-import"></i>
-          <span>استيراد سريع</span>
-        </button>
-
-        <button id="recheckAllBtn" class="btn btn-outline" title="إعادة فحص واختبار كل المواقع الآن">
+        <button id="recheckAllBtn" class="btn btn-primary" title="إعادة فحص واختبار كل المواقع الآن">
           <i class="fa-solid fa-rotate" id="refreshIcon"></i>
           <span>فحص الكل</span>
         </button>
@@ -72,33 +54,11 @@
             <option value="300">كل 5 دقائق</option>
           </select>
         </div>
-
-        <div class="control-group">
-          <select id="gridLayoutSelect" class="custom-select" title="طريقة تقسيم الشاشة">
-            <option value="grid-auto">تخطيط: تلقائي</option>
-            <option value="grid-3x3" selected>شبكة 3 × 3 (9 شاشات)</option>
-            <option value="grid-2x2">شبكة 2 × 2</option>
-            <option value="grid-4col">4 أعمدة عريضة</option>
-            <option value="grid-list">عرض مصغر كقائمة</option>
-          </select>
-        </div>
-
-        <button id="resetDefaultsBtn" class="btn btn-ghost" title="استعادة المواقع الأساسية">
-          <i class="fa-solid fa-arrow-rotate-left"></i>
-        </button>
       </div>
     </header>
 
     <!-- Live Metrics & Summary Bar -->
     <section class="metrics-bar" id="metricsBar">
-      <div class="metric-card total-card">
-        <div class="metric-icon"><i class="fa-solid fa-globe"></i></div>
-        <div class="metric-info">
-          <span class="metric-label">إجمالي المواقع</span>
-          <div class="metric-value"><span id="statTotal">0</span> <small>مواقع</small></div>
-        </div>
-      </div>
-
       <div class="metric-card online-card">
         <div class="metric-icon"><i class="fa-solid fa-circle-check"></i></div>
         <div class="metric-info">
@@ -167,7 +127,7 @@
     </div>
 
     <!-- Main Grid Container for iframes -->
-    <main class="sites-grid-container grid-3x3" id="sitesGrid">
+    <main class="sites-grid-container grid-2x2" id="sitesGrid">
       <!-- Site cards will be injected dynamically via JS -->
     </main>
 
@@ -175,13 +135,13 @@
     <div class="empty-state" id="emptyState" style="display: none;">
       <div class="empty-icon"><i class="fa-solid fa-folder-open"></i></div>
       <h3>لا توجد مواقع حالياً لعرضها</h3>
-      <p>يمكنك إضافة موقع جديد أو استيراد قائمة بالضغط على الزر أدناه</p>
+      <p>يمكنك إضافة موقع جديد بالضغط على الزر أدناه</p>
       <div class="empty-actions">
         <button class="btn btn-primary" onclick="openAddModal()">
-          <i class="fa-solid fa-plus"></i> إضافة أول موقع
+          <i class="fa-solid fa-plus"></i> إضافة موقع جديد
         </button>
         <button class="btn btn-secondary" onclick="loadDefaultSites()">
-          <i class="fa-solid fa-rotate-left"></i> تحميل المواقع الافتراضية
+          <i class="fa-solid fa-rotate-left"></i> استعادة المواقع الأساسية
         </button>
       </div>
     </div>
@@ -233,45 +193,6 @@
           </button>
         </div>
       </form>
-    </div>
-  </div>
-
-  <!-- Modal: Bulk Import -->
-  <div class="modal-overlay" id="bulkModal">
-    <div class="modal-card bulk-card">
-      <div class="modal-header">
-        <div class="modal-title-group">
-          <i class="fa-solid fa-file-import modal-icon"></i>
-          <h3>استيراد روابط ومواقع متعددة (Bulk Import)</h3>
-        </div>
-        <button class="modal-close-btn" id="closeBulkModalBtn"><i class="fa-solid fa-xmark"></i></button>
-      </div>
-      <div class="modal-body">
-        <p class="bulk-instructions">
-          قم بلصق قائمة المواقع هنا. كل سطر يمكن أن يحتوي على:
-          <br><code>اسم الموقع | الرابط</code> أو مجرد <code>الرابط</code> فقط في كل سطر.
-        </p>
-        <textarea id="bulkInputText" class="bulk-textarea" rows="8" placeholder="مثال:
-بوابة العيون | https://eyetoora.com/ar
-داواتورا التجريبي | https://testwebsite.dawatoora.com/
-جنيد ماسة A4 | https://a4.junedmasa.com/ar
-إطارات جنيد ماسة | https://tyres.junedmasa.com/en"></textarea>
-
-        <div class="bulk-options">
-          <label class="checkbox-label">
-            <input type="checkbox" id="bulkAppendCheck" checked>
-            <span>إضافة إلى المواقع الحالية (عدم مسح المواقع السابقة)</span>
-          </label>
-        </div>
-
-        <div class="modal-actions">
-          <button type="button" class="btn btn-ghost" id="cancelBulkBtn">إلغاء</button>
-          <button type="button" class="btn btn-primary" id="processBulkBtn">
-            <i class="fa-solid fa-upload"></i>
-            <span>استيراد القائمة فوراً</span>
-          </button>
-        </div>
-      </div>
     </div>
   </div>
 
