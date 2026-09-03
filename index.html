@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Masa Pulse | لوحة استعراض ومراقبة المواقع الحية</title>
+  <meta name="description" content="لوحة تحكم تفاعلية متطورة لمراقبة واستعراض عدة مواقع في وقت واحد عبر أطر iFrame مع فحص فوري لحالة الاتصال وسرعة الاستجابة">
+  
+  <!-- Favicon -->
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220%22%200%22%20100%22%20100%22><circle cx=%2250%22 cy=%2250%22 r=%2245%22 fill=%22%2310b981%22/><path d=%22M25 50 L42 67 L75 33%22 stroke=%22white%22 stroke-width=%2210%22 fill=%22none%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22/></svg>">
+
+  <!-- Google Fonts: Cairo & Plus Jakarta Sans -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  
+  <!-- FontAwesome for icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <!-- Background ambient glow effect -->
+  <div class="ambient-glow glow-1"></div>
+  <div class="ambient-glow glow-2"></div>
+
+  <div class="app-container">
+    <!-- Top Header -->
+    <header class="app-header" id="mainHeader">
+      <div class="header-branding">
+        <div class="logo-wrapper">
+          <div class="logo-icon">
+            <i class="fa-solid fa-satellite-dish"></i>
+          </div>
+          <div class="pulse-ring"></div>
+        </div>
+        <div class="branding-text">
+          <div class="title-row">
+            <h1>Masa Pulse Monitor</h1>
+            <span class="live-pill"><span class="live-dot"></span> مباشر</span>
+          </div>
+          <p class="subtitle">مراقبة واستعراض حي لكافة المواقع في شاشة واحدة</p>
+        </div>
+      </div>
+
+      <!-- Quick Action Controls -->
+      <div class="header-actions">
+        <button id="addSiteBtn" class="btn btn-primary" title="إضافة موقع جديد إلى القائمة">
+          <i class="fa-solid fa-plus"></i>
+          <span>إضافة موقع</span>
+        </button>
+
+        <button id="bulkImportBtn" class="btn btn-secondary" title="إضافة أو استيراد عدة روابط دفة واحدة">
+          <i class="fa-solid fa-file-import"></i>
+          <span>استيراد سريع</span>
+        </button>
+
+        <button id="recheckAllBtn" class="btn btn-outline" title="إعادة فحص واختبار كل المواقع الآن">
+          <i class="fa-solid fa-rotate" id="refreshIcon"></i>
+          <span>فحص الكل</span>
+        </button>
+
+        <div class="control-group">
+          <label for="autoRefreshSelect" class="control-label" title="فحص دوري تلقائي">
+            <i class="fa-solid fa-clock-rotate-left"></i>
+          </label>
+          <select id="autoRefreshSelect" class="custom-select" title="الفحص التلقائي">
+            <option value="0">تحديث تلقائي: معطل</option>
+            <option value="30">كل 30 ثانية</option>
+            <option value="60" selected>كل 1 دقيقة</option>
+            <option value="120">كل 2 دقيقة</option>
+            <option value="300">كل 5 دقائق</option>
+          </select>
+        </div>
+
+        <div class="control-group">
+          <select id="gridLayoutSelect" class="custom-select" title="طريقة تقسيم الشاشة">
+            <option value="grid-auto">تخطيط: تلقائي</option>
+            <option value="grid-3x3" selected>شبكة 3 × 3 (9 شاشات)</option>
+            <option value="grid-2x2">شبكة 2 × 2</option>
+            <option value="grid-4col">4 أعمدة عريضة</option>
+            <option value="grid-list">عرض مصغر كقائمة</option>
+          </select>
+        </div>
+
+        <button id="resetDefaultsBtn" class="btn btn-ghost" title="استعادة المواقع الأساسية">
+          <i class="fa-solid fa-arrow-rotate-left"></i>
+        </button>
+      </div>
+    </header>
+
+    <!-- Live Metrics & Summary Bar -->
+    <section class="metrics-bar" id="metricsBar">
+      <div class="metric-card total-card">
+        <div class="metric-icon"><i class="fa-solid fa-globe"></i></div>
+        <div class="metric-info">
+          <span class="metric-label">إجمالي المواقع</span>
+          <div class="metric-value"><span id="statTotal">0</span> <small>مواقع</small></div>
+        </div>
+      </div>
+
+      <div class="metric-card online-card">
+        <div class="metric-icon"><i class="fa-solid fa-circle-check"></i></div>
+        <div class="metric-info">
+          <span class="metric-label">المواقع الشغالة (Online)</span>
+          <div class="metric-value text-success"><span id="statOnline">0</span> <small>شغال</small></div>
+        </div>
+        <div class="status-indicator-dot online-glow"></div>
+      </div>
+
+      <div class="metric-card offline-card">
+        <div class="metric-icon"><i class="fa-solid fa-circle-xmark"></i></div>
+        <div class="metric-info">
+          <span class="metric-label">المواقع الواقعة (Down)</span>
+          <div class="metric-value text-danger"><span id="statOffline">0</span> <small>واقع</small></div>
+        </div>
+        <div class="status-indicator-dot offline-glow" id="offlineGlow"></div>
+      </div>
+
+      <div class="metric-card uptime-card">
+        <div class="metric-icon"><i class="fa-solid fa-shield-heart"></i></div>
+        <div class="metric-info">
+          <span class="metric-label">كفاءة المنظومة (Uptime)</span>
+          <div class="metric-value text-accent"><span id="statUptimePercent">100</span>%</div>
+          <div class="progress-bar-bg">
+            <div class="progress-bar-fill" id="uptimeProgressBar" style="width: 100%;"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="metric-card latency-card">
+        <div class="metric-icon"><i class="fa-solid fa-bolt"></i></div>
+        <div class="metric-info">
+          <span class="metric-label">متوسط الاستجابة</span>
+          <div class="metric-value text-warning"><span id="statAvgLatency">--</span> <small>ms</small></div>
+          <span class="metric-sub" id="lastCheckTimeText">آخر فحص: جاري التحميل...</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Filter & Search Toolbar -->
+    <div class="toolbar-section">
+      <div class="search-box">
+        <i class="fa-solid fa-magnifying-glass"></i>
+        <input type="text" id="siteSearchInput" placeholder="بحث سريع في أسماء أو روابط المواقع...">
+        <button id="clearSearchBtn" class="clear-btn" style="display: none;"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+
+      <div class="filter-pills">
+        <button class="filter-pill active" data-filter="all">
+          الكل (<span id="countAllFilter">0</span>)
+        </button>
+        <button class="filter-pill filter-online" data-filter="online">
+          <i class="fa-solid fa-circle text-success" style="font-size: 0.6rem;"></i>
+          الشغالين (<span id="countOnlineFilter">0</span>)
+        </button>
+        <button class="filter-pill filter-offline" data-filter="offline">
+          <i class="fa-solid fa-circle text-danger" style="font-size: 0.6rem;"></i>
+          الواقعين (<span id="countOfflineFilter">0</span>)
+        </button>
+      </div>
+
+      <div class="next-refresh-badge" id="nextRefreshBadge">
+        <i class="fa-solid fa-arrows-rotate"></i>
+        <span>الفحص القادم خلال: <b id="countdownSeconds">60</b>ث</span>
+      </div>
+    </div>
+
+    <!-- Main Grid Container for iframes -->
+    <main class="sites-grid-container grid-3x3" id="sitesGrid">
+      <!-- Site cards will be injected dynamically via JS -->
+    </main>
+
+    <!-- Empty State Message -->
+    <div class="empty-state" id="emptyState" style="display: none;">
+      <div class="empty-icon"><i class="fa-solid fa-folder-open"></i></div>
+      <h3>لا توجد مواقع حالياً لعرضها</h3>
+      <p>يمكنك إضافة موقع جديد أو استيراد قائمة بالضغط على الزر أدناه</p>
+      <div class="empty-actions">
+        <button class="btn btn-primary" onclick="openAddModal()">
+          <i class="fa-solid fa-plus"></i> إضافة أول موقع
+        </button>
+        <button class="btn btn-secondary" onclick="loadDefaultSites()">
+          <i class="fa-solid fa-rotate-left"></i> تحميل المواقع الافتراضية
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Add / Edit Website -->
+  <div class="modal-overlay" id="siteModal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div class="modal-title-group">
+          <i class="fa-solid fa-globe modal-icon"></i>
+          <h3 id="modalTitle">إضافة موقع جديد</h3>
+        </div>
+        <button class="modal-close-btn" id="closeModalBtn"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <form id="siteForm" class="modal-form">
+        <input type="hidden" id="editSiteId" value="">
+        
+        <div class="form-group">
+          <label for="siteNameInput">اسم الموقع <span class="required">*</span></label>
+          <div class="input-with-icon">
+            <i class="fa-solid fa-tag"></i>
+            <input type="text" id="siteNameInput" placeholder="مثال: متجر الإطارات الرئيسي" required autocomplete="off">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="siteUrlInput">رابط الموقع (URL) <span class="required">*</span></label>
+          <div class="input-with-icon">
+            <i class="fa-solid fa-link"></i>
+            <input type="url" id="siteUrlInput" placeholder="https://example.com" required autocomplete="off">
+          </div>
+          <small class="form-hint">احرص على كتابة الرابط كاملاً يبدأ بـ https:// أو http://</small>
+        </div>
+
+        <div class="form-group">
+          <label for="siteCategoryInput">المجموعة أو التصنيف (اختياري)</label>
+          <div class="input-with-icon">
+            <i class="fa-solid fa-folder"></i>
+            <input type="text" id="siteCategoryInput" placeholder="مثال: مواقع الإنتاج، فروع، متاجر...">
+          </div>
+        </div>
+
+        <div class="modal-actions">
+          <button type="button" class="btn btn-ghost" id="cancelModalBtn">إلغاء</button>
+          <button type="submit" class="btn btn-primary" id="saveSiteBtn">
+            <i class="fa-solid fa-check"></i>
+            <span id="saveBtnText">حفظ وإضافة</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal: Bulk Import -->
+  <div class="modal-overlay" id="bulkModal">
+    <div class="modal-card bulk-card">
+      <div class="modal-header">
+        <div class="modal-title-group">
+          <i class="fa-solid fa-file-import modal-icon"></i>
+          <h3>استيراد روابط ومواقع متعددة (Bulk Import)</h3>
+        </div>
+        <button class="modal-close-btn" id="closeBulkModalBtn"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="modal-body">
+        <p class="bulk-instructions">
+          قم بلصق قائمة المواقع هنا. كل سطر يمكن أن يحتوي على:
+          <br><code>اسم الموقع | الرابط</code> أو مجرد <code>الرابط</code> فقط في كل سطر.
+        </p>
+        <textarea id="bulkInputText" class="bulk-textarea" rows="8" placeholder="مثال:
+بوابة العيون | https://eyetoora.com/ar
+داواتورا التجريبي | https://testwebsite.dawatoora.com/
+جنيد ماسة A4 | https://a4.junedmasa.com/ar
+إطارات جنيد ماسة | https://tyres.junedmasa.com/en"></textarea>
+
+        <div class="bulk-options">
+          <label class="checkbox-label">
+            <input type="checkbox" id="bulkAppendCheck" checked>
+            <span>إضافة إلى المواقع الحالية (عدم مسح المواقع السابقة)</span>
+          </label>
+        </div>
+
+        <div class="modal-actions">
+          <button type="button" class="btn btn-ghost" id="cancelBulkBtn">إلغاء</button>
+          <button type="button" class="btn btn-primary" id="processBulkBtn">
+            <i class="fa-solid fa-upload"></i>
+            <span>استيراد القائمة فوراً</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Fullscreen Iframe Preview -->
+  <div class="modal-overlay fullscreen-overlay" id="fullscreenModal">
+    <div class="fullscreen-window">
+      <div class="fullscreen-topbar">
+        <div class="fullscreen-site-info">
+          <span class="status-pill status-online" id="fsStatusPill">
+            <span class="status-dot"></span>
+            <span id="fsStatusText">متصل</span>
+          </span>
+          <h3 id="fsSiteTitle">اسم الموقع</h3>
+          <span class="fs-site-url" id="fsSiteUrl">https://...</span>
+        </div>
+        <div class="fullscreen-actions">
+          <button class="btn btn-ghost btn-sm" id="fsReloadBtn" title="إعادة تحميل"><i class="fa-solid fa-rotate-right"></i></button>
+          <a href="#" target="_blank" rel="noopener noreferrer" class="btn btn-ghost btn-sm" id="fsExternalBtn" title="فتح في تبويب خارجي"><i class="fa-solid fa-arrow-up-right-from-square"></i></a>
+          <button class="btn btn-ghost btn-sm" id="fsCloseBtn" title="إغلاق"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+      </div>
+      <div class="fullscreen-body">
+        <iframe id="fsIframe" src="" frameborder="0" allowfullscreen></iframe>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification Container -->
+  <div class="toast-container" id="toastContainer"></div>
+
+  <!-- JavaScript Application Logic -->
+  <script src="app.js"></script>
+</body>
+</html>
