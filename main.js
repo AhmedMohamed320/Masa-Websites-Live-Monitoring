@@ -3,31 +3,31 @@
  * Monitors multiple website iframes and checks online/offline health status.
  */
 
-// Initial default websites (the 4 official websites)
+// Initial default websites (English names only)
 const DEFAULT_SITES = [
   {
     id: 'site-1',
-    name: 'بوابة العيون (Eyetoora)',
+    name: 'Eyetoora',
     url: 'https://eyetoora.com/ar',
-    category: 'الإنتاج الرئيسي'
+    category: 'Production'
   },
   {
     id: 'site-2',
-    name: 'داواتورا (Dawatoora)',
+    name: 'Dawatoora',
     url: 'https://testwebsite.dawatoora.com/',
-    category: 'داواتورا'
+    category: 'Dawatoora'
   },
   {
     id: 'site-3',
-    name: 'جنيد ماسة A4 (Juned Masa)',
+    name: 'Juned Masa A4',
     url: 'https://a4.junedmasa.com/ar',
-    category: 'خدمات ماسة'
+    category: 'Services'
   },
   {
     id: 'site-4',
-    name: 'إطارات جنيد ماسة (Juned Tyres)',
+    name: 'Juned Tyres',
     url: 'https://tyres.junedmasa.com/en',
-    category: 'متاجر وإطارات'
+    category: 'Stores'
   }
 ];
 
@@ -108,37 +108,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
 function loadSitesFromStorage() {
   try {
-    const saved = localStorage.getItem('masa_monitored_sites_v3');
+    const saved = localStorage.getItem('masa_monitored_sites_v4');
     if (saved) {
       state.sites = JSON.parse(saved);
     } else {
-      // Clean up previous storage and eliminate old demo sites
-      const oldSaved = localStorage.getItem('masa_monitored_sites_v2') || localStorage.getItem('masa_monitored_sites');
-      if (oldSaved) {
-        try {
-          const parsed = JSON.parse(oldSaved);
-          const demoUrls = ['example.com', 'wikipedia.org', 'httpbin.org', 'w3schools.com', 'cdnjs.cloudflare.com'];
-          const filtered = parsed.filter(s => 
-            !demoUrls.some(d => s.url && s.url.includes(d)) && 
-            !s.name.includes('مساحة مخصصة') &&
-            !s.name.includes('الموقع الخامس') &&
-            !s.name.includes('الموقع السادس') &&
-            !s.name.includes('الموقع السابع') &&
-            !s.name.includes('الموقع الثامن') &&
-            !s.name.includes('الموقع التاسع')
-          );
-          state.sites = filtered.length > 0 ? filtered : [...DEFAULT_SITES];
-        } catch (_) {
-          state.sites = [...DEFAULT_SITES];
-        }
-      } else {
-        state.sites = [...DEFAULT_SITES];
-      }
+      state.sites = JSON.parse(JSON.stringify(DEFAULT_SITES));
       saveSitesToStorage();
     }
   } catch (e) {
     console.error('Error loading sites from storage:', e);
-    state.sites = [...DEFAULT_SITES];
+    state.sites = JSON.parse(JSON.stringify(DEFAULT_SITES));
   }
 
   // Fix grid layout to 2x2 for the 4 official sites
@@ -147,7 +126,7 @@ function loadSitesFromStorage() {
 }
 
 function saveSitesToStorage() {
-  localStorage.setItem('masa_monitored_sites_v3', JSON.stringify(state.sites));
+  localStorage.setItem('masa_monitored_sites_v4', JSON.stringify(state.sites));
 }
 
 /* ==========================================================================
