@@ -8,26 +8,22 @@ const DEFAULT_SITES = [
   {
     id: 'site-1',
     name: 'Eyetoora',
-    url: 'https://eyetoora.com/ar',
-    category: 'Production'
+    url: 'https://eyetoora.com/ar'
   },
   {
     id: 'site-2',
     name: 'Dawatoora',
-    url: 'https://testwebsite.dawatoora.com/',
-    category: 'Dawatoora'
+    url: 'https://testwebsite.dawatoora.com/'
   },
   {
     id: 'site-3',
     name: 'Juned Masa A4',
-    url: 'https://a4.junedmasa.com/ar',
-    category: 'Services'
+    url: 'https://a4.junedmasa.com/ar'
   },
   {
     id: 'site-4',
     name: 'Juned Tyres',
-    url: 'https://tyres.junedmasa.com/en',
-    category: 'Stores'
+    url: 'https://tyres.junedmasa.com/en'
   }
 ];
 
@@ -61,26 +57,11 @@ const countOnlineFilter = document.getElementById('countOnlineFilter');
 const countOfflineFilter = document.getElementById('countOfflineFilter');
 const countdownSeconds = document.getElementById('countdownSeconds');
 
-const addSiteBtn = document.getElementById('addSiteBtn');
 const recheckAllBtn = document.getElementById('recheckAllBtn');
 const refreshIcon = document.getElementById('refreshIcon');
 const autoRefreshSelect = document.getElementById('autoRefreshSelect');
 const siteSearchInput = document.getElementById('siteSearchInput');
 const clearSearchBtn = document.getElementById('clearSearchBtn');
-
-// Modals
-const siteModal = document.getElementById('siteModal');
-const siteForm = document.getElementById('siteForm');
-const modalTitle = document.getElementById('modalTitle');
-const editSiteId = document.getElementById('editSiteId');
-const siteNameInput = document.getElementById('siteNameInput');
-const siteUrlInput = document.getElementById('siteUrlInput');
-const siteCategoryInput = document.getElementById('siteCategoryInput');
-const saveBtnText = document.getElementById('saveBtnText');
-const closeModalBtn = document.getElementById('closeModalBtn');
-const cancelModalBtn = document.getElementById('cancelModalBtn');
-
-
 
 // Fullscreen Preview Modal
 const fullscreenModal = document.getElementById('fullscreenModal');
@@ -111,6 +92,8 @@ function loadSitesFromStorage() {
     const saved = localStorage.getItem('masa_monitored_sites_v4');
     if (saved) {
       state.sites = JSON.parse(saved);
+      // Remove legacy category field if present
+      state.sites.forEach(s => { delete s.category; });
     } else {
       state.sites = JSON.parse(JSON.stringify(DEFAULT_SITES));
       saveSitesToStorage();
@@ -133,19 +116,6 @@ function saveSitesToStorage() {
    Event Listeners
    ========================================================================== */
 function setupEventListeners() {
-  // Add Site Modal
-  if (addSiteBtn) addSiteBtn.addEventListener('click', () => openAddModal());
-  if (closeModalBtn) closeModalBtn.addEventListener('click', closeSiteModal);
-  if (cancelModalBtn) cancelModalBtn.addEventListener('click', closeSiteModal);
-  if (siteModal) {
-    siteModal.addEventListener('click', (e) => {
-      if (e.target === siteModal) closeSiteModal();
-    });
-  }
-  if (siteForm) siteForm.addEventListener('submit', handleSiteFormSubmit);
-
-
-
   // Re-check All
   recheckAllBtn.addEventListener('click', () => {
     triggerManualRefresh();
@@ -202,7 +172,6 @@ function setupEventListeners() {
   // Keyboard escape
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
-      closeSiteModal();
       closeFullscreenModal();
     }
   });
@@ -456,8 +425,7 @@ function renderSites() {
     // Filter query
     const matchesSearch = !state.searchQuery ||
       site.name.toLowerCase().includes(state.searchQuery) ||
-      site.url.toLowerCase().includes(state.searchQuery) ||
-      (site.category && site.category.toLowerCase().includes(state.searchQuery));
+      site.url.toLowerCase().includes(state.searchQuery);
 
     // Filter status
     const statusObj = state.siteStatuses[site.id];
@@ -697,84 +665,7 @@ window.deleteSite = function(siteId) {
   }
 };
 
-/* ==========================================================================
-   Modals: Add / Edit
-   ========================================================================== */
-window.openAddModal = function() {
-  modalTitle.textContent = 'إضافة موقع جديد';
-  saveBtnText.textContent = 'حفظ وإضافة';
-  editSiteId.value = '';
-  siteNameInput.value = '';
-  siteUrlInput.value = '';
-  siteCategoryInput.value = '';
-  siteModal.classList.add('active');
-  siteNameInput.focus();
-};
 
-window.openEditModal = function(siteId) {
-  const site = state.sites.find(s => s.id === siteId);
-  if (!site) return;
-
-  modalTitle.textContent = 'تعديل بيانات الموقع';
-  saveBtnText.textContent = 'حفظ التعديلات';
-  editSiteId.value = site.id;
-  siteNameInput.value = site.name;
-  siteUrlInput.value = site.url;
-  siteCategoryInput.value = site.category || '';
-  siteModal.classList.add('active');
-  siteNameInput.focus();
-};
-
-function closeSiteModal() {
-  siteModal.classList.remove('active');
-}
-
-function handleSiteFormSubmit(e) {
-  e.preventDefault();
-
-  const id = editSiteId.value;
-  const name = siteNameInput.value.trim();
-  let url = siteUrlInput.value.trim();
-  const category = siteCategoryInput.value.trim();
-
-  if (!name || !url) {
-    showToast('يرجى ملء اسم ورابط الموقع!', 'error');
-    return;
-  }
-
-  // Ensure protocol
-  if (!url.startsWith('http://') && !url.startsWith('https://')) {
-    url = 'https://' + url;
-  }
-
-  if (id) {
-    // Edit existing
-    const site = state.sites.find(s => s.id === id);
-    if (site) {
-      site.name = name;
-      site.url = url;
-      site.category = category;
-      showToast(`تم تحديث موقع "${name}" بنجاح.`, 'success');
-    }
-  } else {
-    // Add new
-    const newSite = {
-      id: 'site-' + Date.now(),
-      name: name,
-      url: url,
-      category: category
-    };
-    state.sites.push(newSite);
-    showToast(`تمت إضافة موقع "${name}" بنجاح!`, 'success');
-    // Check it immediately
-    setTimeout(() => checkSingleSite(newSite), 200);
-  }
-
-  saveSitesToStorage();
-  closeSiteModal();
-  renderSites();
-  updateMetricsSummary();
-}
 
 
 

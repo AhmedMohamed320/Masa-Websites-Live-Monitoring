@@ -137,11 +137,8 @@
     <div class="empty-state" id="emptyState" style="display: none;">
       <div class="empty-icon"><i class="fa-solid fa-folder-open"></i></div>
       <h3>لا توجد مواقع حالياً لعرضها</h3>
-      <p>يمكنك إضافة موقع جديد بالضغط على الزر أدناه</p>
+      <p>يمكنك استعادة المواقع الأساسية بالضغط على الزر أدناه</p>
       <div class="empty-actions">
-        <button class="btn btn-primary" onclick="openAddModal()">
-          <i class="fa-solid fa-plus"></i> إضافة موقع جديد
-        </button>
         <button class="btn btn-secondary" onclick="loadDefaultSites()">
           <i class="fa-solid fa-rotate-left"></i> استعادة المواقع الأساسية
         </button>
@@ -149,54 +146,6 @@
     </div>
   </div>
 
-  <!-- Modal: Add / Edit Website -->
-  <div class="modal-overlay" id="siteModal">
-    <div class="modal-card">
-      <div class="modal-header">
-        <div class="modal-title-group">
-          <i class="fa-solid fa-globe modal-icon"></i>
-          <h3 id="modalTitle">إضافة موقع جديد</h3>
-        </div>
-        <button class="modal-close-btn" id="closeModalBtn"><i class="fa-solid fa-xmark"></i></button>
-      </div>
-      <form id="siteForm" class="modal-form">
-        <input type="hidden" id="editSiteId" value="">
-        
-        <div class="form-group">
-          <label for="siteNameInput">اسم الموقع <span class="required">*</span></label>
-          <div class="input-with-icon">
-            <i class="fa-solid fa-tag"></i>
-            <input type="text" id="siteNameInput" placeholder="مثال: متجر الإطارات الرئيسي" required autocomplete="off">
-          </div>
-        </div>
-
-        <div class="form-group">
-          <label for="siteUrlInput">رابط الموقع (URL) <span class="required">*</span></label>
-          <div class="input-with-icon">
-            <i class="fa-solid fa-link"></i>
-            <input type="url" id="siteUrlInput" placeholder="https://example.com" required autocomplete="off">
-          </div>
-          <small class="form-hint">احرص على كتابة الرابط كاملاً يبدأ بـ https:// أو http://</small>
-        </div>
-
-        <div class="form-group">
-          <label for="siteCategoryInput">المجموعة أو التصنيف (اختياري)</label>
-          <div class="input-with-icon">
-            <i class="fa-solid fa-folder"></i>
-            <input type="text" id="siteCategoryInput" placeholder="مثال: مواقع الإنتاج، فروع، متاجر...">
-          </div>
-        </div>
-
-        <div class="modal-actions">
-          <button type="button" class="btn btn-ghost" id="cancelModalBtn">إلغاء</button>
-          <button type="submit" class="btn btn-primary" id="saveSiteBtn">
-            <i class="fa-solid fa-check"></i>
-            <span id="saveBtnText">حفظ وإضافة</span>
-          </button>
-        </div>
-      </form>
-    </div>
-  </div>
 
   <!-- Modal: Fullscreen Iframe Preview -->
   <div class="modal-overlay fullscreen-overlay" id="fullscreenModal">
