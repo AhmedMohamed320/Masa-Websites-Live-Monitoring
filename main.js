@@ -3,29 +3,90 @@
  * Monitors multiple website iframes and checks online/offline health status.
  */
 
-// Initial default websites (English names only)
+
+// Initial default websites (15 sites - Medical & Pharma sites first)
 const DEFAULT_SITES = [
+  // --- المواقع الطبية والصيدلانية (Medical & Pharma Sites - أولاً) ---
   {
-    id: 'site-1',
+    id: 'site-keifei-pharma',
+    name: 'Keifei Pharma',
+    url: 'https://keifeipharma.com/en'
+  },
+  {
+    id: 'site-sven-pharma',
+    name: 'Sven Pharma',
+    url: 'https://svenpharma.com/'
+  },
+  {
+    id: 'site-sven-pharma-web',
+    name: 'Sven Pharma Web',
+    url: 'https://web.svenpharma.com'
+  },
+  {
+    id: 'site-kohoh-pharma',
+    name: 'Kohoh Pharma',
+    url: 'https://kohoh-pharma.com/'
+  },
+
+  // --- باقي مواقع المجموعة ---
+  {
+    id: 'site-masa-group',
+    name: 'Masa International Group',
+    url: 'https://masainternationalgroup.com/en/'
+  },
+  {
+    id: 'site-juned-masa',
+    name: 'Juned Masa',
+    url: 'https://junedmasa.com/'
+  },
+  {
+    id: 'site-juned-a4',
+    name: 'Juned Masa A4',
+    url: 'https://a4.junedmasa.com/'
+  },
+  {
+    id: 'site-juned-tyres',
+    name: 'Juned Tyres',
+    url: 'https://tyres.junedmasa.com/'
+  },
+  {
+    id: 'site-eyetoora',
     name: 'Eyetoora',
     url: 'https://eyetoora.com/ar'
   },
   {
-    id: 'site-2',
-    name: 'Dawatoora',
-    url: 'https://testwebsite.dawatoora.com/'
+    id: 'site-petoora',
+    name: 'Petoora',
+    url: 'https://petoora.com/'
   },
   {
-    id: 'site-3',
-    name: 'Juned Masa A4',
-    url: 'https://a4.junedmasa.com/ar'
+    id: 'site-pure-sight',
+    name: 'Pure Sight',
+    url: 'https://pure-sight.net'
   },
   {
-    id: 'site-4',
-    name: 'Juned Tyres',
-    url: 'https://tyres.junedmasa.com/en'
+    id: 'site-quantum-solutions',
+    name: 'Quantum Solutions',
+    url: 'https://quantumsolution-me.com/en'
+  },
+  {
+    id: 'site-volamall',
+    name: 'Volamall',
+    url: 'https://volamall.com/ar'
+  },
+  {
+    id: 'site-masa-realty',
+    name: 'Masa Realty',
+    url: 'https://masarealty.com/'
+  },
+  {
+    id: 'site-masa-immigration',
+    name: 'Masa Immigration',
+    url: 'https://www.masa-immigration.com/'
   }
 ];
+
+const STORAGE_KEY = 'masa_monitored_sites_v9';
 
 // Application State
 let state = {
@@ -89,11 +150,23 @@ document.addEventListener('DOMContentLoaded', () => {
 
 function loadSitesFromStorage() {
   try {
-    const saved = localStorage.getItem('masa_monitored_sites_v4');
+    const saved = localStorage.getItem(STORAGE_KEY);
     if (saved) {
-      state.sites = JSON.parse(saved);
-      // Remove legacy category field if present
-      state.sites.forEach(s => { delete s.category; });
+      const parsed = JSON.parse(saved);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        state.sites = parsed;
+        // Ensure all DEFAULT_SITES are present if missing
+        const currentUrls = new Set(state.sites.map(s => s.url));
+        DEFAULT_SITES.forEach(defSite => {
+          if (!currentUrls.has(defSite.url)) {
+            state.sites.push(defSite);
+          }
+        });
+        saveSitesToStorage();
+      } else {
+        state.sites = JSON.parse(JSON.stringify(DEFAULT_SITES));
+        saveSitesToStorage();
+      }
     } else {
       state.sites = JSON.parse(JSON.stringify(DEFAULT_SITES));
       saveSitesToStorage();
@@ -103,14 +176,28 @@ function loadSitesFromStorage() {
     state.sites = JSON.parse(JSON.stringify(DEFAULT_SITES));
   }
 
-  // Fix grid layout to 2x2 for the 4 official sites
+  // Always ensure we have sites
+  if (!state.sites || state.sites.length === 0) {
+    state.sites = JSON.parse(JSON.stringify(DEFAULT_SITES));
+    saveSitesToStorage();
+  }
+
+  // Grid layout for official sites
   state.currentLayout = 'grid-2x2';
   applyGridLayout('grid-2x2');
 }
 
 function saveSitesToStorage() {
-  localStorage.setItem('masa_monitored_sites_v4', JSON.stringify(state.sites));
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(state.sites));
 }
+
+window.loadDefaultSites = function() {
+  state.sites = JSON.parse(JSON.stringify(DEFAULT_SITES));
+  saveSitesToStorage();
+  renderSites();
+  checkAllSitesStatus();
+  showToast('تمت استعادة المواقع المعتمدة الـ 15 (الطبية أولاً) بنجاح!', 'success');
+};
 
 /* ==========================================================================
    Event Listeners
@@ -196,6 +283,7 @@ function startCountdownTimer() {
     state.countdown--;
     if (state.countdown <= 0) {
       state.countdown = state.autoRefreshIntervalSeconds;
+      reloadAllIframes();
       checkAllSitesStatus(true);
     }
     updateCountdownUI();
@@ -212,6 +300,7 @@ function updateCountdownUI() {
 
 function triggerManualRefresh() {
   refreshIcon.classList.add('spin-fast');
+  reloadAllIframes();
   checkAllSitesStatus(true).then(() => {
     setTimeout(() => {
       refreshIcon.classList.remove('spin-fast');
@@ -222,13 +311,52 @@ function triggerManualRefresh() {
   updateCountdownUI();
 }
 
+/**
+ * Resolves the optimal URL for iframe display.
+ * Websites that send X-Frame-Options: SAMEORIGIN (such as masarealty.com and masa-immigration.com)
+ * are routed through /api/proxy?url=... which strips the blocking headers and injects <base href>
+ * so the site displays completely inside the iframe without the sad document icon (refused to connect).
+ */
+function getIframeUrl(siteUrl) {
+  const requiresProxy = [
+    'masarealty.com',
+    'masa-immigration.com',
+    'svenpharma.com',
+    'kohoh-pharma.com',
+    'keifeipharma.com'
+  ].some(domain => siteUrl.toLowerCase().includes(domain));
+
+  if (requiresProxy) {
+    return `/api/proxy?url=${encodeURIComponent(siteUrl)}&_t=${Date.now()}`;
+  }
+
+  return `${siteUrl}${siteUrl.includes('?') ? '&' : '?'}_t=${Date.now()}`;
+}
+
+/**
+ * Reloads all site iframes with cache-busting to reflect real-time state.
+ * Ensures iframes show the same content as opening the URL in a new tab.
+ */
+function reloadAllIframes() {
+  state.sites.forEach(site => {
+    const iframe = document.getElementById(`iframe-${site.id}`);
+    const loader = document.getElementById(`loader-${site.id}`);
+    const errorOverlay = document.getElementById(`error-overlay-${site.id}`);
+    if (loader) loader.classList.remove('hidden');
+    if (errorOverlay) errorOverlay.style.display = 'none';
+    if (iframe) {
+      iframe.src = getIframeUrl(site.url);
+    }
+  });
+}
+
 /* ==========================================================================
    Website Status Checking Engine (Ping / Uptime / Latency)
    ========================================================================== */
 
 /**
  * Checks a website's reachability and calculates latency in ms.
- * Uses client-side fetch in 'no-cors' mode with timeout.
+ * Uses /api/check for real status code and latency, with fallback to no-cors.
  */
 async function checkSingleSite(site) {
   state.siteStatuses[site.id] = {
@@ -240,17 +368,59 @@ async function checkSingleSite(site) {
   updateMetricsSummary();
 
   const startTime = performance.now();
+
+  // 1. Primary: Server Check API (measures exact HTTP status and checks for XFO)
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 6000);
+    const checkRes = await fetch(`/api/check?url=${encodeURIComponent(site.url)}`, {
+      signal: controller.signal
+    });
+    clearTimeout(timeoutId);
+
+    if (checkRes.ok) {
+      const data = await checkRes.json();
+      const latency = data.latency || Math.round(performance.now() - startTime);
+
+      state.siteStatuses[site.id] = {
+        status: data.ok ? 'online' : 'offline',
+        latency: latency,
+        statusCode: data.statusCode,
+        statusText: data.statusText,
+        blocksIframe: data.blocksIframe,
+        isBlankPage: data.isBlankPage,
+        isCloudflareBlocked: data.isCloudflareBlocked,
+        isServerErrorPage: data.isServerErrorPage,
+        finalUrl: data.finalUrl,
+        lastChecked: new Date()
+      };
+
+      // If server reports iframe is blocked by XFO, ensure the iframe uses the proxy
+      if (data.blocksIframe) {
+        const iframe = document.getElementById(`iframe-${site.id}`);
+        if (iframe && !iframe.src.includes('/api/proxy')) {
+          iframe.src = `/api/proxy?url=${encodeURIComponent(site.url)}&_t=${Date.now()}`;
+        }
+      }
+
+      updateCardStatusUI(site.id);
+      updateMetricsSummary();
+      return;
+    }
+  } catch (apiErr) {
+    // API not reachable (running as pure static host), fall back to browser ping
+  }
+
+  // 2. Fallback: Browser no-cors ping
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 9000); // 9 sec timeout
+  const timeoutId = setTimeout(() => controller.abort(), 9000);
 
   try {
-    // Normalizing URL
     let cleanUrl = site.url.trim();
     if (!cleanUrl.startsWith('http://') && !cleanUrl.startsWith('https://')) {
       cleanUrl = 'https://' + cleanUrl;
     }
 
-    // Attempt fetch with no-cors. If reachable, fetch resolves even for cross-origin!
     await fetch(cleanUrl, {
       method: 'HEAD',
       mode: 'no-cors',
@@ -268,8 +438,6 @@ async function checkSingleSite(site) {
     };
   } catch (err) {
     clearTimeout(timeoutId);
-    // If it was aborted due to timeout, or failed completely:
-    // Let's do a secondary check with GET no-cors before marking completely down
     try {
       const controller2 = new AbortController();
       const timeoutId2 = setTimeout(() => controller2.abort(), 5000);
@@ -530,9 +698,10 @@ function createSiteCardElement(site) {
       <iframe
         id="iframe-${site.id}"
         class="site-iframe"
-        src="${site.url}"
-        loading="lazy"
-        sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-modals"
+        src="${getIframeUrl(site.url)}"
+        loading="eager"
+        referrerpolicy="no-referrer-when-downgrade"
+        allow="clipboard-read; clipboard-write"
         onload="handleIframeLoaded('${site.id}')"
         onerror="handleIframeError('${site.id}')"
         title="${site.name}">
@@ -568,41 +737,69 @@ function handleIframeError(siteId) {
   const loader = document.getElementById(`loader-${siteId}`);
   if (loader) loader.classList.add('hidden');
   
+  const iframe = document.getElementById(`iframe-${siteId}`);
   const errorOverlay = document.getElementById(`error-overlay-${siteId}`);
   if (errorOverlay) errorOverlay.style.display = 'flex';
+  if (iframe) iframe.style.display = 'none';
 }
 
 function updateCardStatusUI(siteId) {
   const badge = document.getElementById(`badge-${siteId}`);
   const statusInfo = state.siteStatuses[siteId] || { status: 'checking', latency: null };
   const errorOverlay = document.getElementById(`error-overlay-${siteId}`);
+  const card = document.getElementById(`card-${siteId}`);
+
+  if (card) {
+    card.classList.remove('site-card-online', 'site-card-offline');
+    if (statusInfo.status === 'online') {
+      card.classList.add('site-card-online');
+    } else if (statusInfo.status === 'offline') {
+      card.classList.add('site-card-offline');
+    }
+  }
 
   if (badge) {
     badge.className = `card-status-badge status-${statusInfo.status}`;
     badge.innerHTML = `
       <span class="status-dot"></span>
-      <span class="status-text">${getStatusLabel(statusInfo.status)}</span>
+      <span class="status-text">${getStatusLabel(statusInfo)}</span>
       <span class="latency-tag">${statusInfo.latency ? `${statusInfo.latency}ms` : ''}</span>
     `;
   }
 
-  // If offline, display the error overlay
-  if (errorOverlay) {
-    if (statusInfo.status === 'offline') {
+  // Allow the iframe to remain VISIBLE to reflect the exact state of the website in real-time
+  // (whether it is an error page, blank page, or normal UI).
+  // Only show overlay if browser blocks embedding completely (X-Frame-Options) without proxy.
+  const iframe = document.getElementById(`iframe-${siteId}`);
+  if (errorOverlay && iframe) {
+    if (statusInfo.blocksIframe && !iframe.src.includes('/api/proxy')) {
       errorOverlay.style.display = 'flex';
+      iframe.style.display = 'none';
     } else {
       errorOverlay.style.display = 'none';
+      iframe.style.display = '';
     }
   }
 }
 
-function getStatusLabel(status) {
-  switch (status) {
-    case 'online': return 'شغال';
-    case 'offline': return 'واقع / معطل';
-    case 'checking': return 'جاري الفحص...';
-    default: return 'غير معروف';
+function getStatusLabel(statusInfo) {
+  if (typeof statusInfo === 'string') {
+    switch (statusInfo) {
+      case 'online': return 'شغال';
+      case 'offline': return 'واقع / معطل';
+      case 'checking': return 'جاري الفحص...';
+      default: return 'غير معروف';
+    }
   }
+  if (!statusInfo) return 'غير معروف';
+  if (statusInfo.isServerErrorPage) return 'عطل بالخادم (500)';
+  if (statusInfo.isBlankPage) return 'صفحة بيضاء / عطل';
+  if (statusInfo.isCloudflareBlocked) return 'حماية Cloudflare';
+  if (statusInfo.status === 'offline') {
+    return statusInfo.statusCode ? `معطل (${statusInfo.statusCode})` : 'واقع / لا يستجيب';
+  }
+  if (statusInfo.status === 'online') return 'شغال';
+  return 'جاري الفحص...';
 }
 
 /* ==========================================================================
@@ -617,13 +814,7 @@ window.recheckSite = function(siteId) {
   if (loader) loader.classList.remove('hidden');
 
   if (iframe) {
-    try {
-      const url = new URL(site.url);
-      url.searchParams.set('_t', Date.now());
-      iframe.src = url.toString();
-    } catch (e) {
-      iframe.src = site.url;
-    }
+    iframe.src = getIframeUrl(site.url);
   }
 
   checkSingleSite(site);
@@ -642,7 +833,7 @@ window.openFullscreenPreview = function(siteId) {
   fsStatusPill.className = `status-pill status-${statusInfo.status}`;
   fsStatusText.textContent = getStatusLabel(statusInfo.status);
 
-  fsIframe.src = site.url;
+  fsIframe.src = getIframeUrl(site.url);
   fullscreenModal.classList.add('active');
 };
 

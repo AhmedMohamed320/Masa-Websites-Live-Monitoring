@@ -856,6 +856,15 @@ body {
   transform: translateY(-3px);
 }
 
+.site-card.site-card-offline {
+  border-color: rgba(239, 68, 68, 0.55);
+  box-shadow: 0 0 20px rgba(239, 68, 68, 0.18);
+}
+
+.site-card.site-card-online {
+  border-color: rgba(16, 185, 129, 0.25);
+}
+
 /* Card Header */
 .card-header {
   display: flex;
