@@ -9,10 +9,10 @@
   <!-- Favicon -->
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220%22%200%22%20100%22%20100%22><circle cx=%2250%22 cy=%2250%22 r=%2245%22 fill=%22%2310b981%22/><path d=%22M25 50 L42 67 L75 33%22 stroke=%22white%22 stroke-width=%2210%22 fill=%22none%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22/></svg>">
 
-  <!-- Google Fonts: Rubik -->
+  <!-- Google Fonts: Rubik & Plus Jakarta Sans -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Rubik:ital,wght@0,300..900;1,300..900&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Rubik:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   
   <!-- FontAwesome for icons -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
@@ -20,9 +20,8 @@
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <!-- Background ambient glow effect -->
-  <div class="ambient-glow glow-1"></div>
-  <div class="ambient-glow glow-2"></div>
+  <!-- Ambient background subtle light vignette -->
+  <div class="bg-vignette"></div>
 
   <div class="app-container">
     <!-- Top Header -->
@@ -64,8 +63,8 @@
       <div class="metric-card online-card">
         <div class="metric-icon"><i class="fa-solid fa-circle-check"></i></div>
         <div class="metric-info">
-          <span class="metric-label">المواقع الشغالة (Online)</span>
-          <div class="metric-value text-success"><span id="statOnline">0</span> <small>شغال</small></div>
+          <span class="metric-label">المواقع المتصلة (Online)</span>
+          <div class="metric-value text-success"><span id="statOnline">0</span> <small>متصل</small></div>
         </div>
         <div class="status-indicator-dot online-glow"></div>
       </div>
@@ -73,30 +72,10 @@
       <div class="metric-card offline-card">
         <div class="metric-icon"><i class="fa-solid fa-circle-xmark"></i></div>
         <div class="metric-info">
-          <span class="metric-label">المواقع الواقعة (Down)</span>
-          <div class="metric-value text-danger"><span id="statOffline">0</span> <small>واقع</small></div>
+          <span class="metric-label">المواقع غير المتصلة (Offline)</span>
+          <div class="metric-value text-danger"><span id="statOffline">0</span> <small>غير متصل</small></div>
         </div>
         <div class="status-indicator-dot offline-glow" id="offlineGlow"></div>
-      </div>
-
-      <div class="metric-card uptime-card">
-        <div class="metric-icon"><i class="fa-solid fa-shield-heart"></i></div>
-        <div class="metric-info">
-          <span class="metric-label">كفاءة المنظومة (Uptime)</span>
-          <div class="metric-value text-accent"><span id="statUptimePercent">100</span>%</div>
-          <div class="progress-bar-bg">
-            <div class="progress-bar-fill" id="uptimeProgressBar" style="width: 100%;"></div>
-          </div>
-        </div>
-      </div>
-
-      <div class="metric-card latency-card">
-        <div class="metric-icon"><i class="fa-solid fa-bolt"></i></div>
-        <div class="metric-info">
-          <span class="metric-label">متوسط الاستجابة</span>
-          <div class="metric-value text-warning"><span id="statAvgLatency">--</span> <small>ms</small></div>
-          <span class="metric-sub" id="lastCheckTimeText">آخر فحص: جاري التحميل...</span>
-        </div>
       </div>
     </section>
 
@@ -114,22 +93,24 @@
         </button>
         <button class="filter-pill filter-online" data-filter="online">
           <i class="fa-solid fa-circle text-success" style="font-size: 0.6rem;"></i>
-          الشغالين (<span id="countOnlineFilter">0</span>)
+          المتصلة (<span id="countOnlineFilter">0</span>)
         </button>
         <button class="filter-pill filter-offline" data-filter="offline">
           <i class="fa-solid fa-circle text-danger" style="font-size: 0.6rem;"></i>
-          الواقعين (<span id="countOfflineFilter">0</span>)
+          غير المتصلة (<span id="countOfflineFilter">0</span>)
         </button>
       </div>
 
       <div class="next-refresh-badge" id="nextRefreshBadge">
         <i class="fa-solid fa-arrows-rotate"></i>
-        <span>الفحص القادم خلال: <b id="countdownSeconds">60</b>ث</span>
+        <span>الفحص القادم: <b id="countdownSeconds">60</b>ث</span>
+        <span class="last-check-sep">•</span>
+        <span id="lastCheckTimeText">آخر فحص: جاري الفحص...</span>
       </div>
     </div>
 
-    <!-- Main Grid Container for iframes -->
-    <main class="sites-grid-container grid-2x2" id="sitesGrid">
+    <!-- Main Grid Container for iframes (3 columns on PC) -->
+    <main class="sites-grid-container grid-3col" id="sitesGrid">
       <!-- Site cards will be injected dynamically via JS -->
     </main>
 

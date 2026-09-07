@@ -1,0 +1,14 @@
+{
+  "name": "masa-pulse-monitor",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Masa Pulse - Live Website Monitoring Dashboard",
+  "main": "server.mjs",
+  "scripts": {
+    "start": "node server.mjs",
+    "dev": "node server.mjs"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

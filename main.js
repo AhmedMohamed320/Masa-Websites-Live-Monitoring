@@ -86,7 +86,7 @@ const DEFAULT_SITES = [
   }
 ];
 
-const STORAGE_KEY = 'masa_monitored_sites_v9';
+const STORAGE_KEY = 'masa_monitored_sites_v10';
 
 // Application State
 let state = {
@@ -98,7 +98,7 @@ let state = {
   countdown: 60,
   countdownTimerId: null,
   autoRefreshTimerId: null,
-  currentLayout: 'grid-2x2'
+  currentLayout: 'grid-3col'
 };
 
 // DOM Elements
@@ -107,9 +107,6 @@ const emptyState = document.getElementById('emptyState');
 const statTotal = document.getElementById('statTotal');
 const statOnline = document.getElementById('statOnline');
 const statOffline = document.getElementById('statOffline');
-const statUptimePercent = document.getElementById('statUptimePercent');
-const uptimeProgressBar = document.getElementById('uptimeProgressBar');
-const statAvgLatency = document.getElementById('statAvgLatency');
 const lastCheckTimeText = document.getElementById('lastCheckTimeText');
 const offlineGlow = document.getElementById('offlineGlow');
 
@@ -150,18 +147,45 @@ document.addEventListener('DOMContentLoaded', () => {
 
 function loadSitesFromStorage() {
   try {
+    // Purge outdated storage keys from older versions to avoid leftover duplicates
+    localStorage.removeItem('masa_monitored_sites_v8');
+    localStorage.removeItem('masa_monitored_sites_v9');
+
     const saved = localStorage.getItem(STORAGE_KEY);
     if (saved) {
       const parsed = JSON.parse(saved);
       if (Array.isArray(parsed) && parsed.length > 0) {
-        state.sites = parsed;
-        // Ensure all DEFAULT_SITES are present if missing
-        const currentUrls = new Set(state.sites.map(s => s.url));
-        DEFAULT_SITES.forEach(defSite => {
-          if (!currentUrls.has(defSite.url)) {
-            state.sites.push(defSite);
+        // Deduplicate strictly by ID and normalized URL
+        const seenIds = new Set();
+        const seenUrls = new Set();
+        const deduplicated = [];
+
+        parsed.forEach(site => {
+          let cleanUrl = site.url ? site.url.trim() : '';
+          // Upgrade old web.svenpharma.com path to /en
+          if (cleanUrl.includes('web.svenpharma.com') && !cleanUrl.includes('/en')) {
+            cleanUrl = 'https://web.svenpharma.com/en';
+            site.url = cleanUrl;
+          }
+
+          const normKey = cleanUrl.toLowerCase().replace(/\/+$/, '');
+          if (!seenIds.has(site.id) && !seenUrls.has(normKey)) {
+            seenIds.add(site.id);
+            seenUrls.add(normKey);
+            deduplicated.push(site);
           }
         });
+
+        // Ensure all DEFAULT_SITES are present without creating duplicates
+        DEFAULT_SITES.forEach(defSite => {
+          const normDefUrl = defSite.url.toLowerCase().replace(/\/+$/, '');
+          const exists = deduplicated.some(s => s.id === defSite.id || s.url.toLowerCase().replace(/\/+$/, '') === normDefUrl);
+          if (!exists) {
+            deduplicated.push(JSON.parse(JSON.stringify(defSite)));
+          }
+        });
+
+        state.sites = deduplicated;
         saveSitesToStorage();
       } else {
         state.sites = JSON.parse(JSON.stringify(DEFAULT_SITES));
@@ -174,6 +198,7 @@ function loadSitesFromStorage() {
   } catch (e) {
     console.error('Error loading sites from storage:', e);
     state.sites = JSON.parse(JSON.stringify(DEFAULT_SITES));
+    saveSitesToStorage();
   }
 
   // Always ensure we have sites
@@ -182,9 +207,9 @@ function loadSitesFromStorage() {
     saveSitesToStorage();
   }
 
-  // Grid layout for official sites
-  state.currentLayout = 'grid-2x2';
-  applyGridLayout('grid-2x2');
+  // Grid layout for official sites (3 columns on PC)
+  state.currentLayout = 'grid-3col';
+  applyGridLayout('grid-3col');
 }
 
 function saveSitesToStorage() {
@@ -318,13 +343,24 @@ function triggerManualRefresh() {
  * so the site displays completely inside the iframe without the sad document icon (refused to connect).
  */
 function getIframeUrl(siteUrl) {
-  const requiresProxy = [
+  let hostname = '';
+  try {
+    hostname = new URL(siteUrl).hostname.toLowerCase();
+  } catch (e) {
+    hostname = siteUrl.toLowerCase();
+  }
+
+  // Sites known to strictly require proxy due to X-Frame-Options: SAMEORIGIN
+  // web.svenpharma.com is excluded to load directly and avoid Cloudflare proxy 403
+  const isExcluded = hostname.includes('web.svenpharma.com');
+
+  const requiresProxy = !isExcluded && [
     'masarealty.com',
     'masa-immigration.com',
     'svenpharma.com',
     'kohoh-pharma.com',
     'keifeipharma.com'
-  ].some(domain => siteUrl.toLowerCase().includes(domain));
+  ].some(domain => hostname === domain || hostname.endsWith('.' + domain));
 
   if (requiresProxy) {
     return `/api/proxy?url=${encodeURIComponent(siteUrl)}&_t=${Date.now()}`;
@@ -395,8 +431,8 @@ async function checkSingleSite(site) {
         lastChecked: new Date()
       };
 
-      // If server reports iframe is blocked by XFO, ensure the iframe uses the proxy
-      if (data.blocksIframe) {
+      // If server reports iframe is blocked by XFO, ensure the iframe uses the proxy (except Cloudflare protected subdomains)
+      if (data.blocksIframe && !site.url.includes('web.svenpharma.com')) {
         const iframe = document.getElementById(`iframe-${site.id}`);
         if (iframe && !iframe.src.includes('/api/proxy')) {
           iframe.src = `/api/proxy?url=${encodeURIComponent(site.url)}&_t=${Date.now()}`;
@@ -511,18 +547,12 @@ function updateMetricsSummary() {
   let onlineCount = 0;
   let offlineCount = 0;
   let checkingCount = 0;
-  let totalLatency = 0;
-  let latencyCount = 0;
 
   state.sites.forEach(site => {
     const s = state.siteStatuses[site.id];
     if (s) {
       if (s.status === 'online') {
         onlineCount++;
-        if (s.latency) {
-          totalLatency += s.latency;
-          latencyCount++;
-        }
       } else if (s.status === 'offline') {
         offlineCount++;
       } else {
@@ -535,52 +565,29 @@ function updateMetricsSummary() {
 
   // Update Top Stats
   if (statTotal) statTotal.textContent = total;
-  statOnline.textContent = onlineCount;
-  statOffline.textContent = offlineCount;
+  if (statOnline) statOnline.textContent = onlineCount;
+  if (statOffline) statOffline.textContent = offlineCount;
 
   // Filter counts
-  countAllFilter.textContent = total;
-  countOnlineFilter.textContent = onlineCount;
-  countOfflineFilter.textContent = offlineCount;
-
-  // Uptime Percentage
-  let uptimePercent = 100;
-  if (total > 0) {
-    const evaluatedTotal = onlineCount + offlineCount;
-    if (evaluatedTotal > 0) {
-      uptimePercent = Math.round((onlineCount / evaluatedTotal) * 100);
-    } else {
-      uptimePercent = 100;
-    }
-  }
-  statUptimePercent.textContent = uptimePercent;
-  uptimeProgressBar.style.width = `${uptimePercent}%`;
-
-  if (uptimePercent < 80) {
-    uptimeProgressBar.style.background = 'linear-gradient(90deg, #ef4444, #f59e0b)';
-  } else {
-    uptimeProgressBar.style.background = 'linear-gradient(90deg, #10b981, #06b6d4)';
-  }
+  if (countAllFilter) countAllFilter.textContent = total;
+  if (countOnlineFilter) countOnlineFilter.textContent = onlineCount;
+  if (countOfflineFilter) countOfflineFilter.textContent = offlineCount;
 
   // Offline glow indicator
-  if (offlineCount > 0) {
-    offlineGlow.classList.add('active');
-  } else {
-    offlineGlow.classList.remove('active');
-  }
-
-  // Latency Average
-  if (latencyCount > 0) {
-    const avg = Math.round(totalLatency / latencyCount);
-    statAvgLatency.textContent = `${avg}`;
-  } else {
-    statAvgLatency.textContent = '--';
+  if (offlineGlow) {
+    if (offlineCount > 0) {
+      offlineGlow.classList.add('active');
+    } else {
+      offlineGlow.classList.remove('active');
+    }
   }
 
   // Last check time
-  const now = new Date();
-  const timeStr = now.toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-  lastCheckTimeText.textContent = `آخر فحص: ${timeStr}`;
+  if (lastCheckTimeText) {
+    const now = new Date();
+    const timeStr = now.toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    lastCheckTimeText.textContent = `آخر فحص: ${timeStr}`;
+  }
 }
 
 /* ==========================================================================
@@ -785,20 +792,20 @@ function updateCardStatusUI(siteId) {
 function getStatusLabel(statusInfo) {
   if (typeof statusInfo === 'string') {
     switch (statusInfo) {
-      case 'online': return 'شغال';
-      case 'offline': return 'واقع / معطل';
+      case 'online': return 'متصل';
+      case 'offline': return 'غير متصل';
       case 'checking': return 'جاري الفحص...';
       default: return 'غير معروف';
     }
   }
   if (!statusInfo) return 'غير معروف';
   if (statusInfo.isServerErrorPage) return 'عطل بالخادم (500)';
-  if (statusInfo.isBlankPage) return 'صفحة بيضاء / عطل';
+  if (statusInfo.isBlankPage) return 'استجابة غير مكتملة';
   if (statusInfo.isCloudflareBlocked) return 'حماية Cloudflare';
   if (statusInfo.status === 'offline') {
-    return statusInfo.statusCode ? `معطل (${statusInfo.statusCode})` : 'واقع / لا يستجيب';
+    return statusInfo.statusCode ? `غير متاح (${statusInfo.statusCode})` : 'غير متصل';
   }
-  if (statusInfo.status === 'online') return 'شغال';
+  if (statusInfo.status === 'online') return 'متصل';
   return 'جاري الفحص...';
 }
 
@@ -841,36 +848,6 @@ function closeFullscreenModal() {
   fullscreenModal.classList.remove('active');
   fsIframe.src = 'about:blank';
 }
-
-window.deleteSite = function(siteId) {
-  const site = state.sites.find(s => s.id === siteId);
-  if (!site) return;
-
-  if (confirm(`هل أنت متأكد من حذف موقع "${site.name}" من اللوحة؟`)) {
-    state.sites = state.sites.filter(s => s.id !== siteId);
-    delete state.siteStatuses[siteId];
-    saveSitesToStorage();
-    renderSites();
-    updateMetricsSummary();
-    showToast(`تم حذف موقع "${site.name}" بنجاح.`, 'info');
-  }
-};
-
-
-
-
-
-/* ==========================================================================
-   Default Sites Loader
-   ========================================================================== */
-window.loadDefaultSites = function() {
-  state.sites = JSON.parse(JSON.stringify(DEFAULT_SITES));
-  state.siteStatuses = {};
-  saveSitesToStorage();
-  renderSites();
-  checkAllSitesStatus();
-  showToast('تمت استعادة المواقع الافتراضية بنجاح!', 'success');
-};
 
 /* ==========================================================================
    Toast Notification System
