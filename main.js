@@ -6,29 +6,6 @@
 
 // Initial default websites (15 sites - Medical & Pharma sites first)
 const DEFAULT_SITES = [
-  // --- المواقع الطبية والصيدلانية (Medical & Pharma Sites - أولاً) ---
-  {
-    id: 'site-keifei-pharma',
-    name: 'Keifei Pharma',
-    url: 'https://keifeipharma.com/en'
-  },
-  {
-    id: 'site-sven-pharma',
-    name: 'Sven Pharma',
-    url: 'https://svenpharma.com/'
-  },
-  {
-    id: 'site-sven-pharma-web',
-    name: 'Sven Pharma Web',
-    url: 'https://web.svenpharma.com'
-  },
-  {
-    id: 'site-kohoh-pharma',
-    name: 'Kohoh Pharma',
-    url: 'https://kohoh-pharma.com/'
-  },
-
-  // --- باقي مواقع المجموعة ---
   {
     id: 'site-masa-group',
     name: 'Masa International Group',
@@ -83,10 +60,15 @@ const DEFAULT_SITES = [
     id: 'site-masa-immigration',
     name: 'Masa Immigration',
     url: 'https://www.masa-immigration.com/'
+  },
+  {
+    id: 'site-primemerce',
+    name: 'Primemerce',
+    url: 'https://primemerce.com/ar'
   }
 ];
 
-const STORAGE_KEY = 'masa_monitored_sites_v10';
+const STORAGE_KEY = 'masa_monitored_sites_v11';
 
 // Application State
 let state = {
@@ -150,6 +132,7 @@ function loadSitesFromStorage() {
     // Purge outdated storage keys from older versions to avoid leftover duplicates
     localStorage.removeItem('masa_monitored_sites_v8');
     localStorage.removeItem('masa_monitored_sites_v9');
+    localStorage.removeItem('masa_monitored_sites_v10');
 
     const saved = localStorage.getItem(STORAGE_KEY);
     if (saved) {
